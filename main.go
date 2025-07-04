@@ -131,7 +131,7 @@ var generateCmd = &cobra.Command{
 
 		// Calculate average and median branch size
 		if len(branchSizes) > 0 {
-			avgSize := float64(totalSize) / float64(len(branchSizes))
+			avgSize := calculateAverage(branchSizes)
 			fmt.Printf("📊 Average Branch Size:   %8.1f tx\n", avgSize)
 
 			// Calculate median
@@ -224,6 +224,18 @@ func numberOfNodes(g *tree.TxGraph) (int, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+func calculateAverage(values []int) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+
+	sum := 0
+	for _, value := range values {
+		sum += value
+	}
+	return float64(sum) / float64(len(values))
 }
 
 func calculateMedian(values []int) float64 {
