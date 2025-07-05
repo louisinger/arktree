@@ -110,6 +110,12 @@ var generateCmd = &cobra.Command{
 			fmt.Printf("\n❌ Error: Failed to get size of branches: %s\n", err)
 			os.Exit(1)
 		}
+
+		branchWeights, err := weightOfBranches(txtree)
+		if err != nil {
+			fmt.Printf("\n❌ Error: Failed to get weight of branches: %s\n", err)
+			os.Exit(1)
+		}
 		fmt.Println("✅")
 
 		// Find biggest branch
@@ -117,6 +123,14 @@ var generateCmd = &cobra.Command{
 		for _, size := range branchSizes {
 			if size > biggestBranch {
 				biggestBranch = size
+			}
+		}
+
+		// Find heaviest branch
+		heaviestBranch := 0.0
+		for _, weight := range branchWeights {
+			if weight > heaviestBranch {
+				heaviestBranch = weight
 			}
 		}
 
@@ -139,6 +153,18 @@ var generateCmd = &cobra.Command{
 			fmt.Printf("📊 Median Branch Size:    %8.1f tx\n", medianSize)
 		}
 
+		fmt.Printf("📡 Most Tx to Broadcast:    %8.2f\n", heaviestBranch)
+
+		// Calculate average and median branch weight
+		if len(branchWeights) > 0 {
+			avgWeight := calculateAverageFloat(branchWeights)
+			fmt.Printf("📊 Avg Tx to Broadcast:    %8.2f\n", avgWeight)
+
+			// Calculate median
+			medianWeight := calculateMedianFloat(branchWeights)
+			fmt.Printf("📊 Median Tx to Broadcast: %8.2f\n", medianWeight)
+		}
+
 		fmt.Println(strings.Repeat("─", 60))
 
 		// Group branches by size
@@ -148,7 +174,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		// Print branch details grouped by size
-		fmt.Println("\n🌿 BRANCH DETAILS:")
+		fmt.Println("\n🌿 BRANCH SIZE DETAILS:")
 		fmt.Println(strings.Repeat("─", 40))
 
 		// Sort sizes for consistent output
@@ -172,6 +198,41 @@ var generateCmd = &cobra.Command{
 				fmt.Printf("%2d branch  with %2d tx\n", count, size)
 			} else {
 				fmt.Printf("%2d branches with %2d tx\n", count, size)
+			}
+		}
+
+		// Group branches by weight (rounded to 2 decimal places)
+		weightCount := make(map[float64]int)
+		for _, weight := range branchWeights {
+			roundedWeight := float64(int(weight*100)) / 100 // Round to 2 decimal places
+			weightCount[roundedWeight]++
+		}
+
+		// Print weight details grouped by weight
+		fmt.Println("\n📡 BROADCAST WEIGHT DETAILS:")
+		fmt.Println(strings.Repeat("─", 40))
+
+		// Sort weights for consistent output
+		var weights []float64
+		for weight := range weightCount {
+			weights = append(weights, weight)
+		}
+
+		// Simple sort (bubble sort for small arrays)
+		for i := 0; i < len(weights)-1; i++ {
+			for j := 0; j < len(weights)-i-1; j++ {
+				if weights[j] > weights[j+1] {
+					weights[j], weights[j+1] = weights[j+1], weights[j]
+				}
+			}
+		}
+
+		for _, weight := range weights {
+			count := weightCount[weight]
+			if count == 1 {
+				fmt.Printf("%2d branch  with %.2f tx to broadcast\n", count, weight)
+			} else {
+				fmt.Printf("%2d branches with %.2f tx to broadcast\n", count, weight)
 			}
 		}
 
@@ -265,4 +326,86 @@ func calculateMedian(values []int) float64 {
 		// Odd number of elements - middle value
 		return float64(sorted[n/2])
 	}
+}
+
+func weightOfBranches(g *tree.TxGraph) ([]float64, error) {
+	leaves := g.Leaves()
+
+	branchWeights := make([]float64, 0, len(leaves))
+
+	for _, leaf := range leaves {
+		branch, err := g.SubGraph([]string{leaf.UnsignedTx.TxID()})
+		if err != nil {
+			return nil, err
+		}
+
+		weight, err := computeBroadcastWeight(branch)
+		if err != nil {
+			return nil, err
+		}
+
+		branchWeights = append(branchWeights, weight)
+	}
+
+	return branchWeights, nil
+}
+
+func calculateAverageFloat(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+
+	sum := 0.0
+	for _, value := range values {
+		sum += value
+	}
+	return sum / float64(len(values))
+}
+
+func calculateMedianFloat(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+
+	// Create a copy to avoid modifying the original slice
+	sorted := make([]float64, len(values))
+	copy(sorted, values)
+
+	// Sort the values
+	for i := 0; i < len(sorted)-1; i++ {
+		for j := 0; j < len(sorted)-i-1; j++ {
+			if sorted[j] > sorted[j+1] {
+				sorted[j], sorted[j+1] = sorted[j+1], sorted[j]
+			}
+		}
+	}
+
+	// Calculate median
+	n := len(sorted)
+	if n%2 == 0 {
+		// Even number of elements - average of two middle values
+		return (sorted[n/2-1] + sorted[n/2]) / 2.0
+	} else {
+		// Odd number of elements - middle value
+		return sorted[n/2]
+	}
+}
+
+// weight = the part of the tx a user has to broadcast
+// if a tx is shared by 3 cosigners, each cosigner has to broadcast 1/3 of the tx
+func computeBroadcastWeight(branch *tree.TxGraph) (float64, error) {
+	var totalWeight float64
+	if err := branch.Apply(func(g *tree.TxGraph) (bool, error) {
+		cosignerKeys, err := tree.GetCosignerKeys(g.Root.Inputs[0])
+		if err != nil {
+			return false, err
+		}
+
+		totalWeight += 1 / float64(len(cosignerKeys))
+		return true, nil
+	}); err != nil {
+		return 0, err
+	}
+
+	return totalWeight, nil
 }
