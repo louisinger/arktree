@@ -39,8 +39,18 @@ go run main.go --help
 go run main.go generate 5
 go run main.go generate 100
 
+# Generate charts across a range of leaf counts
+go run main.go chart 2 10 2    # From 2 to 10 leaves, step by 2
+go run main.go chart 5 25 5    # From 5 to 25 leaves, step by 5
+
+# Export charts to CSV for further analysis
+go run main.go chart 2 10 2 --csv    # Generate chart and export to CSV
+
+
+
 # Show command help
 go run main.go generate --help
+go run main.go chart --help
 ```
 
 ## 📊 Features
@@ -51,6 +61,9 @@ The Arktree CLI generates Ark trees and provides detailed statistics including:
 - **Branch Analysis**: Size distribution of branches (how many transactions each branch contains)
 - **Broadcast Analysis**: Weight distribution showing how many transactions each user needs to broadcast
 - **Performance Metrics**: Average, median, and distribution statistics for both size and broadcast weight
+- **Comparative Analysis**: Chart generation across different leaf counts to analyze scaling characteristics
+- **CSV Export**: Export chart results to CSV files for further analysis in spreadsheet applications
+
 
 ### Example Output
 
@@ -90,6 +103,38 @@ The Arktree CLI generates Ark trees and provides detailed statistics including:
 ============================================================
 🎉 Successfully generated Ark tree with 5 leaves!
 ============================================================
+
+### Chart Command Example
+
+```
+📊 Ark Tree Chart Generator
+===================================================
+📈 Generating charts from 2 to 6 leaves (step: 2)...
+
+🔧 Processing 2 leaves... ✅
+🔧 Processing 4 leaves... ✅
+🔧 Processing 6 leaves... ✅
+
+================================================================================
+📊 CHART RESULTS
+================================================================================
+Leaves   | Total Tx | Biggest  | Avg Size | Median   | Most Tx  | Avg Tx   | Median Tx
+         |          | Branch   |          | Size     | Broadcast | Broadcast | Broadcast
+────────────────────────────────────────────────────────────────────────────────
+2        | 3        | 2        | 2.0      | 2.0      | 1.50     | 1.50     | 1.50    
+4        | 7        | 3        | 3.0      | 3.0      | 1.75     | 1.75     | 1.75    
+6        | 11       | 4        | 3.7      | 4.0      | 1.92     | 1.83     | 1.92    
+────────────────────────────────────────────────────────────────────────────────
+
+📈 SUMMARY STATISTICS:
+────────────────────────────────────────
+Total Transactions: 3 → 11 (range: 8)
+Biggest Branch:     2 → 4 (range: 2)
+Most Tx Broadcast:  1.50 → 1.92 (range: 0.42)
+
+================================================================================
+🎉 Chart generation complete! Analyzed 3 different leaf counts.
+================================================================================
 ```
 
 ## 🔍 Understanding the Statistics
