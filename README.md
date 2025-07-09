@@ -124,7 +124,7 @@ golangci-lint run
 
 ## 📦 Dependencies
 
-- [ark-network/ark](https://github.com/ark-network/ark) - Core Ark tree functionality
+- [arkade-os/arkd](https://github.com/arkade-os/arkd) - Core Ark tree functionality
 - [btcsuite/btcd](https://github.com/btcsuite/btcd) - Bitcoin protocol implementation
 - [spf13/cobra](https://github.com/spf13/cobra) - CLI framework
 - [decred/dcrd](https://github.com/decred/dcrd) - Cryptographic primitives 
